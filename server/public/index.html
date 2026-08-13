@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Tracker — Dashboard</title>
+  <meta name="description" content="Real-time email open tracking dashboard. See who opened your emails, when, and from where." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #080b12;
+      --surface:      #0e1320;
+      --surface2:     #131929;
+      --border:       rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --accent:       #6366f1;
+      --accent-glow:  rgba(99,102,241,0.25);
+      --green:        #22c55e;
+      --green-dim:    rgba(34,197,94,0.12);
+      --amber:        #f59e0b;
+      --red:          #ef4444;
+      --text-1:       #f1f5f9;
+      --text-2:       #94a3b8;
+      --text-3:       #475569;
+      --radius:       14px;
+      --radius-sm:    8px;
+    }
+
+    html { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-1); }
+    body { min-height: 100vh; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+    header {
+      background: rgba(14,19,32,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      padding: 0 2rem;
+    }
+    .header-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; gap: 1rem;
+      height: 60px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text-1);
+      text-decoration: none;
+    }
+    .logo-dot {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      display: grid; place-items: center; font-size: 14px;
+    }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .refresh-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-2); font-size: 12px; font-family: inherit;
+      padding: 6px 14px; border-radius: var(--radius-sm); cursor: pointer;
+      transition: all .2s; display: flex; align-items: center; gap: 6px;
+    }
+    .refresh-btn:hover { border-color: var(--border-hover); color: var(--text-1); }
+    .refresh-btn.spinning svg { animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .last-updated { font-size: 11px; color: var(--text-3); }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem; width: 100%; }
+
+    /* ── Stats bar ──────────────────────────────────── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem 1.5rem;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border-hover); }
+    .stat-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+    .stat-value { font-size: 28px; font-weight: 700; margin-top: 6px; color: var(--text-1); line-height: 1; }
+    .stat-value.green { color: var(--green); }
+    .stat-value.accent { color: var(--accent); }
+    .stat-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+    /* ── Email list ─────────────────────────────────── */
+    .section-title {
+      font-size: 13px; font-weight: 600; color: var(--text-2);
+      margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; }
+
+    .email-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .email-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      transition: border-color .2s, box-shadow .2s; cursor: pointer;
+    }
+    .email-card:hover { border-color: var(--border-hover); box-shadow: 0 4px 24px rgba(0,0,0,.3); }
+    .email-card.opened { border-left: 3px solid var(--green); }
+    .email-card.machine-only { border-left: 3px solid var(--text-3); }
+
+    .email-card-header {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem 1.25rem;
+    }
+
+    .open-indicator {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 16px;
+    }
+    .open-indicator.yes { background: var(--green-dim); }
+    .open-indicator.no  { background: rgba(255,255,255,0.04); }
+    .open-indicator.bot { background: rgba(255,255,255,0.04); }
+
+    .email-meta { flex: 1; min-width: 0; }
+    .email-subject {
+      font-size: 14px; font-weight: 600; color: var(--text-1);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-to {
+      font-size: 12px; color: var(--text-2); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .email-badges { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .badge {
+      font-size: 11px; font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .badge.open   { background: var(--green-dim);             color: var(--green); }
+    .badge.none   { background: rgba(255,255,255,0.05);       color: var(--text-3); }
+    .badge.machine{ background: rgba(255,255,255,0.05);       color: var(--text-3); }
+    .badge.time   { background: transparent;                  color: var(--text-3); font-weight: 400; font-size: 11px; }
+
+    .chevron { color: var(--text-3); transition: transform .2s; flex-shrink: 0; }
+    .email-card.expanded .chevron { transform: rotate(180deg); }
+
+    /* ── Open events panel ──────────────────────────── */
+    .opens-panel {
+      border-top: 1px solid var(--border);
+      display: none; padding: 0 1.25rem 1rem;
+    }
+    .email-card.expanded .opens-panel { display: block; }
+
+    .opens-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0 10px;
+    }
+    .opens-panel-title { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+
+    .open-events { display: flex; flex-direction: column; gap: 8px; }
+    .open-event {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .open-event.is-machine { opacity: 0.45; }
+
+    .event-dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+    }
+    .event-dot.human   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .event-dot.machine { background: var(--text-3); }
+
+    .event-info { flex: 1; min-width: 0; }
+    .event-time { font-size: 12px; font-weight: 500; color: var(--text-1); }
+    .event-meta { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+    .event-tag  {
+      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+      background: rgba(255,255,255,0.06); color: var(--text-3);
+      margin-left: 6px; vertical-align: middle;
+    }
+
+    .no-opens { padding: 1rem 0; font-size: 13px; color: var(--text-3); text-align: center; }
+
+    /* ── Loading / empty / error ────────────────────── */
+    .state-box {
+      text-align: center; padding: 4rem 2rem; color: var(--text-2);
+    }
+    .state-box .icon { font-size: 40px; margin-bottom: 1rem; }
+    .state-box h3 { font-size: 16px; font-weight: 600; margin-bottom: .5rem; }
+    .state-box p  { font-size: 13px; color: var(--text-3); }
+
+    /* ── Skeleton loader ────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 800px 100%; animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    .skeleton-card {
+      height: 68px; border-radius: var(--radius);
+      margin-bottom: 10px;
+    }
+
+    /* ── Responsive ─────────────────────────────────── */
+    @media (max-width: 640px) {
+      main { padding: 1.25rem; }
+      header { padding: 0 1.25rem; }
+      .email-badges .badge.time { display: none; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="/">
+        <div class="logo-dot">✉️</div>
+        Email Tracker
+      </a>
+      <div class="header-right">
+        <span class="last-updated" id="last-updated"></span>
+        <button class="refresh-btn" id="refresh-btn" onclick="load()">
+          <svg id="refresh-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card skeleton skeleton-card" style="height:88px"></div>
+      <div class="stat-card skeleton skeleton-card" style="height:88px"></div>
+      <div class="stat-card skeleton skeleton-card" style="height:88px"></div>
+      <div class="stat-card skeleton skeleton-card" style="height:88px"></div>
+    </div>
+
+    <!-- Email list -->
+    <div class="section-title"><span></span> Tracked Emails</div>
+    <div class="email-list" id="email-list">
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const API = '';   // same origin
+
+  let allEmails = [];
+  let expandedId = null;
+  let detailCache = {};
+
+  // ── Time helpers ──────────────────────────────────────────────
+  function timeAgo(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return `${d}d ago`;
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleString(undefined, {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────
+  function renderStats(emails) {
+    const total        = emails.length;
+    const opened       = emails.filter(e => e.openCount > 0).length;
+    const totalHuman   = emails.reduce((s, e) => s + (e.openCount || 0), 0);
+    const totalMachine = emails.reduce((s, e) => s + (e.machineOpenCount || 0), 0);
+    const rate = total ? Math.round(opened / total * 100) : 0;
+
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Emails Sent</div>
+        <div class="stat-value">${total}</div>
+        <div class="stat-sub">tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Emails Opened</div>
+        <div class="stat-value green">${opened}</div>
+        <div class="stat-sub">${rate}% open rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Human Opens</div>
+        <div class="stat-value accent">${totalHuman}</div>
+        <div class="stat-sub">real reads</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Machine Opens</div>
+        <div class="stat-value">${totalMachine}</div>
+        <div class="stat-sub">proxy / bot</div>
+      </div>
+    `;
+  }
+
+  // ── Email cards ───────────────────────────────────────────────
+  function renderEmails(emails) {
+    const list = document.getElementById('email-list');
+    if (!emails.length) {
+      list.innerHTML = `
+        <div class="state-box">
+          <div class="icon">📭</div>
+          <h3>No emails tracked yet</h3>
+          <p>Send an email using the Gmail extension and it will appear here.</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    emails.forEach(email => {
+      const opened  = email.openCount > 0;
+      const botOnly = !opened && email.machineOpenCount > 0;
+      const card = document.createElement('div');
+      card.className = `email-card${opened ? ' opened' : botOnly ? ' machine-only' : ''}${expandedId === email.id ? ' expanded' : ''}`;
+      card.dataset.id = email.id;
+
+      const icon    = opened ? '✅' : botOnly ? '🤖' : '📭';
+      const iconCls = opened ? 'yes' : botOnly ? 'bot' : 'no';
+
+      let badgeHtml = '';
+      if (opened) {
+        badgeHtml = `<span class="badge open">${email.openCount} open${email.openCount !== 1 ? 's' : ''}</span>`;
+        if (email.machineOpenCount > 0)
+          badgeHtml += `<span class="badge machine">${email.machineOpenCount} 🤖</span>`;
+      } else if (botOnly) {
+        badgeHtml = `<span class="badge machine">${email.machineOpenCount} machine</span>`;
+      } else {
+        badgeHtml = `<span class="badge none">Not opened</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="email-card-header">
+          <div class="open-indicator ${iconCls}">${icon}</div>
+          <div class="email-meta">
+            <div class="email-subject">${escHtml(email.subject)}</div>
+            <div class="email-to">${escHtml(email.to)}</div>
+          </div>
+          <div class="email-badges">
+            ${badgeHtml}
+            <span class="badge time">${timeAgo(email.sentAt)}</span>
+          </div>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="opens-panel" id="panel-${email.id}">
+          <div class="opens-panel-header">
+            <span class="opens-panel-title">Open Events</span>
+          </div>
+          <div class="open-events" id="events-${email.id}">
+            <div class="no-opens">Loading…</div>
+          </div>
+        </div>`;
+
+      card.addEventListener('click', () => toggleCard(email.id));
+      list.appendChild(card);
+
+      // Re-expand if it was open before re-render
+      if (expandedId === email.id) loadDetail(email.id);
+    });
+  }
+
+  // ── Expand / collapse card ────────────────────────────────────
+  async function toggleCard(id) {
+    if (expandedId === id) {
+      expandedId = null;
+    } else {
+      expandedId = id;
+      await loadDetail(id);
+    }
+    // Just toggle class without full re-render
+    document.querySelectorAll('.email-card').forEach(c => {
+      c.classList.toggle('expanded', c.dataset.id === expandedId);
+    });
+  }
+
+  async function loadDetail(id) {
+    const container = document.getElementById(`events-${id}`);
+    if (!container) return;
+
+    if (!detailCache[id]) {
+      container.innerHTML = '<div class="no-opens">Loading…</div>';
+      try {
+        const res = await fetch(`${API}/api/events/${id}`);
+        detailCache[id] = await res.json();
+      } catch {
+        container.innerHTML = '<div class="no-opens">Failed to load events.</div>';
+        return;
+      }
+    }
+
+    const detail = detailCache[id];
+    const opens  = detail.opens || [];
+
+    if (!opens.length) {
+      container.innerHTML = '<div class="no-opens">No open events recorded yet.</div>';
+      return;
+    }
+
+    const humanCount   = opens.filter(o => !o.isProxy).length;
+    const machineCount = opens.filter(o =>  o.isProxy).length;
+
+    container.innerHTML = opens.map(o => {
+      const isMachine = o.isProxy;
+      const parts = [];
+      if (isMachine) {
+        if (o.proxyReason) parts.push(o.proxyReason.replace(/^(IP:|UA:)/, '').trim());
+      } else {
+        if (o.ip)      parts.push(o.ip);
+        if (o.country) parts.push(o.country);
+        if (o.userAgent) {
+          const ua = parseUA(o.userAgent);
+          if (ua) parts.push(ua);
+        }
+      }
+      return `
+        <div class="open-event${isMachine ? ' is-machine' : ''}">
+          <div class="event-dot ${isMachine ? 'machine' : 'human'}"></div>
+          <div class="event-info">
+            <div class="event-time">
+              ${fmtDate(o.openedAt)}
+              ${isMachine ? '<span class="event-tag">🤖 machine</span>' : '<span class="event-tag">👤 human</span>'}
+            </div>
+            <div class="event-meta">${escHtml(parts.join(' · ')) || '—'}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── UA parser (minimal) ───────────────────────────────────────
+  function parseUA(ua) {
+    if (!ua) return null;
+    if (/iPhone/i.test(ua))    return 'iPhone';
+    if (/iPad/i.test(ua))      return 'iPad';
+    if (/Android/i.test(ua))   return 'Android';
+    if (/Macintosh/i.test(ua)) return 'Mac';
+    if (/Windows/i.test(ua))   return 'Windows';
+    if (/Linux/i.test(ua))     return 'Linux';
+    return null;
+  }
+
+  function escHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Main load ─────────────────────────────────────────────────
+  async function load() {
+    const btn  = document.getElementById('refresh-btn');
+    const icon = document.getElementById('refresh-icon');
+    btn.classList.add('spinning');
+
+    try {
+      const res = await fetch(`${API}/api/events`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allEmails = await res.json();
+      detailCache = {}; // clear cache on refresh
+
+      renderStats(allEmails);
+      renderEmails(allEmails);
+
+      document.getElementById('last-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    } catch (err) {
+      document.getElementById('email-list').innerHTML = `
+        <div class="state-box">
+          <div class="icon">⚠️</div>
+          <h3>Could not load data</h3>
+          <p>${escHtml(err.message)}</p>
+        </div>`;
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  // Auto-refresh every 30s
+  load();
+  setInterval(load, 30000);
+</script>
+</body>
+</html>
