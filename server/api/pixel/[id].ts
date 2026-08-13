@@ -8,12 +8,9 @@ const TRANSPARENT_GIF = Buffer.from(
 );
 
 /**
- * Session deduplication window (milliseconds).
- * If the same email is opened from the same IP within this window,
- * we treat it as one session and skip the duplicate.
- *
- * This prevents double-counting when Gmail re-renders the email
- * (e.g., reading pane → click to open full view) within the same session.
+ * Session deduplication window (ms).
+ * Same email + same IP within this window = one session, skip the duplicate.
+ * Prevents Gmail reading-pane → full-view re-render from counting twice.
  */
 const SESSION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -25,9 +22,14 @@ export default async function handler(
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  res.setHeader('Content-Type', 'image/gif');
+  res.setHeader('Content-Length', TRANSPARENT_GIF.length);
 
   const { id } = req.query as { id: string };
-  if (!id) { res.status(400).end(); return; }
+  if (!id) {
+    res.status(400).end();
+    return;
+  }
 
   const ip =
     (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
@@ -38,45 +40,42 @@ export default async function handler(
 
   const { isProxy, reason } = detectProxy(userAgent, ip);
 
-  // Log asynchronously — don't block pixel delivery
-  (async () => {
-    try {
-      await ensureSchema();
-      const sql = getDb();
+  // ── DB write BEFORE response ───────────────────────────────────
+  // In Vercel serverless, the process is frozen the moment res.end() is
+  // called, so any async work queued after that is silently dropped.
+  // Writing synchronously (from the caller's perspective) guarantees the
+  // event is persisted before we return the pixel.
+  try {
+    await ensureSchema();
+    const sql = getDb();
+    const sessionStart = new Date(Date.now() - SESSION_WINDOW_MS).toISOString();
 
-      const sessionStart = new Date(Date.now() - SESSION_WINDOW_MS).toISOString();
+    const inserted = await sql`
+      INSERT INTO open_events (email_id, ip, user_agent, country, is_proxy, proxy_reason)
+      SELECT ${id}, ${ip}, ${userAgent}, ${country}, ${isProxy}, ${reason}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM open_events
+        WHERE email_id  = ${id}
+          AND ip        = ${ip}
+          AND opened_at > ${sessionStart}::timestamptz
+      )
+      RETURNING id
+    `;
 
-      // Only insert if there is no open from the same IP for this email
-      // within the session window. This prevents Gmail's reading pane +
-      // full-view re-render from being counted as two separate opens.
-      const inserted = await sql`
-        INSERT INTO open_events (email_id, ip, user_agent, country, is_proxy, proxy_reason)
-        SELECT ${id}, ${ip}, ${userAgent}, ${country}, ${isProxy}, ${reason}
-        WHERE NOT EXISTS (
-          SELECT 1 FROM open_events
-          WHERE email_id   = ${id}
-            AND ip         = ${ip}
-            AND opened_at  > ${sessionStart}::timestamptz
-        )
-        RETURNING id
-      `;
-
-      if (inserted.length === 0) {
-        console.log(`⏭️  Duplicate skipped (same session): ${id} — ${ip}`);
-        return;
-      }
-
+    if (inserted.length === 0) {
+      console.log(`⏭️  Duplicate skipped (same session): ${id} — ${ip}`);
+    } else {
       console.log(
         `${isProxy ? '🤖 Machine' : '👤 Human'} open: ${id} — ${
           isProxy ? reason : (userAgent?.slice(0, 60) ?? 'unknown')
         }`,
       );
-    } catch (err) {
-      console.error('[pixel] Failed to log open event:', err);
     }
-  })();
+  } catch (err) {
+    // Log but don't block pixel delivery on DB errors
+    console.error('[pixel] Failed to log open event:', err);
+  }
 
-  res.setHeader('Content-Type', 'image/gif');
-  res.setHeader('Content-Length', TRANSPARENT_GIF.length);
+  // Serve the 1×1 transparent GIF
   res.status(200).end(TRANSPARENT_GIF);
 }
