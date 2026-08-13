@@ -7,7 +7,7 @@
  */
 export {}; // Ensure this file is treated as an ES module
 
-const DEFAULT_SERVER = 'http://localhost:3000';
+const DEFAULT_SERVER = 'https://email-tracker-liard.vercel.app';
 
 // ── Cached server URL ──────────────────────────────────────────
 let serverUrl = DEFAULT_SERVER;

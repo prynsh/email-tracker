@@ -257,7 +257,7 @@ async function render(): Promise<void> {
     'lastPolledAt',
   ])) as StoredData;
 
-  const serverUrl = stored.serverUrl ?? 'http://localhost:3000';
+  const serverUrl = stored.serverUrl ?? 'https://email-tracker-liard.vercel.app';
   const localEmails: TrackedEmail[] = stored.trackedEmails ?? [];
   const serverEmails: TrackedEmail[] = stored.openEvents ?? [];
 
@@ -314,7 +314,7 @@ function closeSettings(): void {
 
 async function saveSettings(): Promise<void> {
   const url = serverUrlInput.value.trim().replace(/\/$/, '');
-  await chrome.storage.local.set({ serverUrl: url || 'http://localhost:3000' });
+  await chrome.storage.local.set({ serverUrl: url || 'https://email-tracker-liard.vercel.app' });
 
   // Close the panel first so the main view is visible
   closeSettings();

@@ -11,7 +11,7 @@ export {}; // Treat as ES module
 
 const ALARM_NAME = 'poll-opens';
 const POLL_INTERVAL_MINUTES = 1;
-const DEFAULT_SERVER = 'http://localhost:3000';
+const DEFAULT_SERVER = 'https://email-tracker-liard.vercel.app';
 
 // ── Icon helper (OffscreenCanvas — no file dependency) ─────────
 async function getIconDataUrl(): Promise<string> {
