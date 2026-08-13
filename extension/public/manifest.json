@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail Email Tracker",
+  "version": "1.0.0",
+  "description": "Know exactly when your Gmail emails are opened — with a real-time dashboard and instant notifications.",
+  "permissions": [
+    "storage",
+    "notifications",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content/gmail-content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Gmail Email Tracker"
+  }
+}

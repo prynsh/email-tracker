@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gmail Email Tracker</title>
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+    crossorigin="anonymous"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header ─────────────────────────────────── -->
+    <header id="header">
+      <div id="header-left">
+        <div id="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="20" height="16" rx="3" fill="url(#logoGrad)"/>
+            <path d="M2 7l10 7 10-7" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 id="app-title">Email Tracker</h1>
+      </div>
+      <button id="settings-btn" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- ── Stats Bar ───────────────────────────────── -->
+    <div id="stats-bar">
+      <div class="stat-card">
+        <span class="stat-value" id="stat-tracked">—</span>
+        <span class="stat-label">Tracked</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-opens">—</span>
+        <span class="stat-label">Opens</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-rate">—</span>
+        <span class="stat-label">Read Rate</span>
+      </div>
+    </div>
+
+    <!-- ── Sync Bar ────────────────────────────────── -->
+    <div id="sync-bar">
+      <span id="last-synced-text">Loading…</span>
+      <button id="refresh-btn" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- ── Main content ───────────────────────────── -->
+    <main id="main-content">
+
+      <!-- Email list -->
+      <div id="email-list" role="list" aria-label="Tracked emails"></div>
+
+      <!-- Empty state -->
+      <div id="empty-state" hidden>
+        <div id="empty-illustration" aria-hidden="true">
+          <svg viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="15" width="100" height="65" rx="8" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+            <path d="M10 28l50 34 50-34" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="90" cy="22" r="12" fill="rgba(99,102,241,0.2)" stroke="rgba(99,102,241,0.4)" stroke-width="1.5"/>
+            <path d="M86 22l3 3 5-5" stroke="rgba(99,102,241,0.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p id="empty-title">No emails tracked yet</p>
+        <p id="empty-subtitle">
+          Open Gmail and send an email — the tracker will automatically inject a
+          pixel and appear here.
+        </p>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading-state">
+        <div class="spinner" aria-label="Loading"></div>
+        <p>Loading your emails…</p>
+      </div>
+
+    </main>
+
+    <!-- ── Settings Panel ─────────────────────────── -->
+    <div id="settings-panel" hidden>
+      <h2 id="settings-title">Settings</h2>
+
+      <div class="settings-field">
+        <label for="server-url-input" class="settings-label">
+          Server URL
+          <span class="settings-hint">Your Vercel deployment URL</span>
+        </label>
+        <input
+          id="server-url-input"
+          type="url"
+          class="settings-input"
+          placeholder="https://your-app.vercel.app"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div id="settings-actions">
+        <button id="save-settings-btn" class="btn-primary">Save</button>
+        <button id="cancel-settings-btn" class="btn-ghost">Cancel</button>
+      </div>
+
+      <p id="settings-footer">
+        Don't have a server yet? Follow the
+        <a id="setup-link" href="https://github.com" target="_blank" rel="noopener">setup guide</a>
+        to deploy to Vercel in 2 minutes.
+      </p>
+    </div>
+
+  </div><!-- /#app -->
+
+  <!-- Email item template -->
+  <template id="email-item-template">
+    <div class="email-item" role="listitem">
+      <div class="email-item-header">
+        <div class="email-status-dot"></div>
+        <div class="email-info">
+          <div class="email-subject"></div>
+          <div class="email-meta">
+            <span class="email-to"></span>
+            <span class="email-dot-sep" aria-hidden="true">·</span>
+            <span class="email-time"></span>
+          </div>
+        </div>
+        <div class="email-right">
+          <span class="email-open-badge"></span>
+          <button class="email-expand-btn" aria-expanded="false" aria-label="Show open history">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="email-opens-list" hidden></div>
+    </div>
+  </template>
+
+  <!-- Open event template -->
+  <template id="open-event-template">
+    <div class="open-event">
+      <div class="open-event-dot" aria-hidden="true"></div>
+      <div class="open-event-info">
+        <div class="open-event-time"></div>
+        <div class="open-event-meta"></div>
+      </div>
+    </div>
+  </template>
+
+  <script src="popup.js"></script>
+</body>
+</html>

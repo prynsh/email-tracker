@@ -1,0 +1,22 @@
+# ── Dependencies ───────────────────────────────────────────────
+node_modules/
+
+# ── Environment / secrets ──────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Build output ───────────────────────────────────────────────
+extension/dist/
+
+# ── Vercel ─────────────────────────────────────────────────────
+.vercel
+
+# ── OS / Editor ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+
+# ── TypeScript ─────────────────────────────────────────────────
+*.tsbuildinfo
